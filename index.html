@@ -39,6 +39,32 @@
             color: #555;
         }
 
+        .timers {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .timer {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+            color: #555;
+        }
+
+        .timer-label {
+            font-weight: bold;
+        }
+
+        .timer-value {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
         .board {
             display: grid;
             grid-template-columns: repeat(3, 100px);
@@ -99,6 +125,16 @@
     <div class="container">
         <h1>Tic Tac Toe</h1>
         <div class="status" id="status">Player X's turn</div>
+        <div class="timers">
+            <div class="timer">
+                <span class="timer-label">Turn Timer:</span>
+                <span class="timer-value" id="turnTimer">00:00</span>
+            </div>
+            <div class="timer">
+                <span class="timer-label">Game Timer:</span>
+                <span class="timer-value" id="gameTimer">00:00</span>
+            </div>
+        </div>
         <div class="board" id="board">
             <button class="cell" data-index="0"></button>
             <button class="cell" data-index="1"></button>
@@ -118,10 +154,17 @@
         const cells = document.querySelectorAll('.cell');
         const status = document.getElementById('status');
         const restart = document.getElementById('restart');
+        const turnTimerDisplay = document.getElementById('turnTimer');
+        const gameTimerDisplay = document.getElementById('gameTimer');
 
         let currentPlayer = 'X';
         let gameBoard = ['', '', '', '', '', '', '', '', ''];
         let gameActive = true;
+
+        let turnSeconds = 0;
+        let gameSeconds = 0;
+        let turnInterval = null;
+        let gameInterval = null;
 
         const winningConditions = [
             [0, 1, 2],
@@ -134,12 +177,57 @@
             [2, 4, 6]
         ];
 
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimers() {
+            turnTimerDisplay.textContent = formatTime(turnSeconds);
+            gameTimerDisplay.textContent = formatTime(gameSeconds);
+        }
+
+        function startTimers() {
+            turnInterval = setInterval(() => {
+                turnSeconds++;
+                updateTimers();
+            }, 1000);
+
+            gameInterval = setInterval(() => {
+                gameSeconds++;
+                updateTimers();
+            }, 1000);
+        }
+
+        function stopTimers() {
+            if (turnInterval) {
+                clearInterval(turnInterval);
+                turnInterval = null;
+            }
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                gameInterval = null;
+            }
+        }
+
+        function resetTimers() {
+            stopTimers();
+            turnSeconds = 0;
+            gameSeconds = 0;
+            updateTimers();
+        }
+
         function handleCellClick(e) {
             const cell = e.target;
             const index = parseInt(cell.getAttribute('data-index'));
 
             if (gameBoard[index] !== '' || !gameActive) {
                 return;
+            }
+
+            if (!turnInterval && !gameInterval) {
+                startTimers();
             }
 
             gameBoard[index] = currentPlayer;
@@ -149,17 +237,21 @@
             if (checkWin()) {
                 status.textContent = `Player ${currentPlayer} wins!`;
                 gameActive = false;
+                stopTimers();
                 return;
             }
 
             if (checkDraw()) {
                 status.textContent = "It's a draw!";
                 gameActive = false;
+                stopTimers();
                 return;
             }
 
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
             status.textContent = `Player ${currentPlayer}'s turn`;
+            turnSeconds = 0;
+            updateTimers();
         }
 
         function checkWin() {
@@ -184,6 +276,7 @@
             gameBoard = ['', '', '', '', '', '', '', '', ''];
             gameActive = true;
             status.textContent = "Player X's turn";
+            resetTimers();
             cells.forEach(cell => {
                 cell.textContent = '';
                 cell.classList.remove('x', 'o', 'winner');
